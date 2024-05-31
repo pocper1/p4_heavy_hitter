@@ -133,7 +133,7 @@ control MyEgress(inout headers hdr,
             // fill out probe fields
             hdr.probe_data.push_front(1);
             hdr.probe_data[0].setValid();
-            if(hdt.probe.hop_cnt == 1) {
+            if(hdr.probe.hop_cnt == 1) {
                 hdr.probe_data[0].bos = 1;
             }
             else {
