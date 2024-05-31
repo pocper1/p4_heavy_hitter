@@ -30,7 +30,7 @@ control MyIngress(inout headers hdr,
     action no_op() {}
 
     action drop() {
-        mark_to_drop(standard_metadata);
+        standard_metadata.egress_spec = 0;
     }
 
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
