@@ -42,7 +42,7 @@ header udp_t {
     bit<16> checksum;
 }
 
-struct metadata_t {
+struct metadata {
     flow_id_t flow_id;
     bit<32> flow_count;
 }
