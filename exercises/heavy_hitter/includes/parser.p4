@@ -5,29 +5,47 @@ parser MyParser(packet_in packet,
 
 
     state start {
-        packet.extract(hdr.ethernet);
+        transition parse_ethernet;
+    }
+
+    state parse_ethernet {
+        packet,extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            0x800: parse_ipv4;
-            default: reject;
+            TYPE_IPV4: parse_ipv4;
+            TYPE_PROBE: parse_probe;
+            default: accept;
         }
     }
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        transition select(hdr.ipv4.protocol) {
-            6: parse_tcp;
-            17: parse_udp;
-            default: accept;
+        transition accept;
+    }
+
+    state parse_probe {
+        packet.extract(hdr.probe);
+        meta.parser_metadata.remaining = hdr.probe.hop_cnt + 1l
+        transition select(hdr.probe.hop_cnt) {
+            0: parse_probe_fwd;
+            default: parse_probe_data;
         }
     }
 
-    state parse_tcp {
-        packet.extract(hdr.tcp);
-        transition accept;
+    state parse_probe_data {
+        packet.extract(hdr.probe_data.next);
+        transition select(hdr.probe_data.last.bos) {
+            1: parse_probe_fwd;
+            default: parse_probe_data;
+        }
     }
 
-    state parse_udp {
-        packet.extract(hdr.udp);
-        transition accept;
+    state parse_probe_fwd {
+        packet.extract(hdr.probe_fwd.next);
+        meta.parser_metadata.remaining = meta.parser_metadata.remaining - 1;
+        meta.egress_spec = hdr.probe_fwd.last.egress_spec;
+        transition select(meta.parser_meta.remaining) {
+            0: accept;
+            default: parse_probe_fwd;
+        }
     }
 }

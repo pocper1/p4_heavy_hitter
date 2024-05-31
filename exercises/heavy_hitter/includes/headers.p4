@@ -1,9 +1,11 @@
 typedef bit<9>  egressSpec_t;
+typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+typedef bit<48> time_t;
 
 header ethernet_t {
-    bit<48> dstAddr;
-    bit<48> srcAddr;
+    macAddr_t dstAddr;
+    macAddr_t srcAddr;
     bit<16> etherType;
 }
 
@@ -22,43 +24,43 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
-header tcp_t {
-    bit<16> srcPort;
-    bit<16> dstPort;
-    bit<32> seqNo;
-    bit<32> ackNo;
-    bit<4>  dataOffset;
-    bit<4>  res;
-    bit<8>  flags;
-    bit<16> window;
-    bit<16> checksum;
-    bit<16> urgentPtr;
+header probe_t {
+    bit<8> hop_cnt;
 }
 
-header udp_t {
-    bit<16> srcPort;
-    bit<16> dstPort;
-    bit<16> length;
-    bit<16> checksum;
+header probe_data_t {
+    bit<1>    bos;
+    bit<7>    swid;
+    bit<8>    port;
+    bit<32>   byte_cnt;
+    time_t    last_time;
+    time_t    cur_time;
 }
 
-struct flow_id_t {
-    bit<32> srcAddr;
-    bit<32> dstAddr;
-    bit<16> srcPort;
-    bit<16> dstPort;
-    bit<8>  proto;
+header probe_fwd_t {
+    bit<8>   egress_spec;
+}
+
+struct parser_metadata_t {
+    bit<8>  remaining;
 }
 
 struct metadata {
-    flow_id_t flow_id;
+    bit<8> egress_spec;
+    
+    //for heavy hitter
+    bit<32> flow_id_srcAddr;
+    bit<32> flow_id_dstAddr;
+    bit<16> flow_id_srcPort;
+    bit<16> flow_id_dstPort;
+    bit<8> flow_id_proto;
     bit<32> flow_count;
-    bit<32> link_status;
 }
 
 struct headers {
-    ethernet_t  ethernet;
-    ipv4_t      ipv4;
-    tcp_t       tcp;
-    udp_t       udp;  
+    ethernet_t ethernet;
+    ipv4_t ipv4;
+    probe_t probe;
+    probe_data_t[MAX_HOPS] probe_data;
+    probe_fwd_t[MAX_HOPS] probe_fwd;
 }
