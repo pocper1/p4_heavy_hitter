@@ -78,16 +78,16 @@ control MyIngress(inout headers hdr,
 
     apply {
         if (hdr.ipv4.isValid()) {
-            meta.flow_id.srcAddr = hdr.ipv4.srcAddr;
-            meta.flow_id.dstAddr = hdr.ipv4.dstAddr;
-            meta.flow_id.proto = hdr.ipv4.protocol;
+            meta.flow_id_srcAddr = hdr.ipv4.srcAddr;
+            meta.flow_id_dstAddr = hdr.ipv4.dstAddr;
+            meta.flow_id_proto = hdr.ipv4.protocol;
 
             if (hdr.tcp.isValid()) {
-                meta.flow_id.srcPort = hdr.tcp.srcPort;
-                meta.flow_id.dstPort = hdr.tcp.dstPort;
+                meta.flow_id_srcPort = hdr.tcp.srcPort;
+                meta.flow_id_dstPort = hdr.tcp.dstPort;
             } else if (hdr.udp.isValid()) {
-                meta.flow_id.srcPort = hdr.udp.srcPort;
-                meta.flow_id.dstPort = hdr.udp.dstPort;
+                meta.flow_id_srcPort = hdr.udp.srcPort;
+                meta.flow_id_dstPort = hdr.udp.dstPort;
             }
             heavy_hitter_detection.apply();
             ipv4_lpm.apply();
