@@ -172,7 +172,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
             hdr.isValid(),
             {
                 hdr.ipv4.version,
-                hdr.ipv4.ipl,
+                hdr.ipv4.ihl,
                 hdr.ipv4.diffserv,
                 hdr.ipv4.totalLen,
                 hdr.ipv4.identification,
@@ -208,10 +208,12 @@ control MyDeparser(packet_out packet, in headers hdr) {
 ***********************  S W I T C H  *******************************
 *************************************************************************/
 
-V1Switch(MyParser(),
-        MyParser(),
-        MyVerifyChecksum(),
-        MyIngress(),
-        MyEgress(),
-        MyComputeChecksum(),
-        MyDeparser()) main;
+V1Switch(
+MyParser(),
+MyVerifyChecksum(),
+MyIngress(),
+MyEgress(),
+MyComputeChecksum(),
+MyDeparser()
+) main;
+
