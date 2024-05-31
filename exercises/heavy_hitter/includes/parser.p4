@@ -9,7 +9,7 @@ parser MyParser(packet_in packet,
     }
 
     state parse_ethernet {
-        packet,extract(hdr.ethernet);
+        packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             TYPE_IPV4: parse_ipv4;
             TYPE_PROBE: parse_probe;
