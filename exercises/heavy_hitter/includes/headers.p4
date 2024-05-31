@@ -41,6 +41,26 @@ header probe_fwd_t {
     bit<8>   egress_spec;
 }
 
+header tcp_t {
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<32> seqNo;
+    bit<32> ackNo;
+    bit<4>  dataOffset;
+    bit<4>  res;
+    bit<8>  flags;
+    bit<16> window;
+    bit<16> checksum;
+    bit<16> urgentPtr;
+}
+
+header udp_t {
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<16> length;
+    bit<16> checksum;
+}
+
 struct parser_metadata_t {
     bit<8>  remaining;
 }
@@ -58,9 +78,11 @@ struct metadata {
 }
 
 struct headers {
-    ethernet_t ethernet;
-    ipv4_t ipv4;
-    probe_t probe;
-    probe_data_t[MAX_HOPS] probe_data;
-    probe_fwd_t[MAX_HOPS] probe_fwd;
+    ethernet_t              ethernet;
+    ipv4_t                  ipv4;
+    tcp_t                   tcp;
+    udp_t                   udp;
+    probe_t                 probe;
+    probe_data_t[MAX_HOPS]  probe_data;
+    probe_fwd_t[MAX_HOPS]   probe_fwd;
 }
