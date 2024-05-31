@@ -28,10 +28,18 @@ control MyIngress(inout headers hdr,
     action no_op() {}
 
     action count_flow() {
-        modify_field(meta.flow_count, meta.flow_count + 1);
+        meta.flow_count = meta.flow_count + 1;
         if (meta.flow_count > THRESHOLD) {
-            mark_to_drop();
+            standard_metadata.egress_spec = 0;
         }
+    }
+
+    action update_link_status() {
+        meta.link_status = 1;
+    }
+
+    action reset_link_status() {
+        meta.link_status = 0;
     }
 
     table heavy_hitter_detection {
@@ -44,6 +52,20 @@ control MyIngress(inout headers hdr,
         }
         size = 1024;
         default_action = no_op(); 
+    }
+
+    table link_monitor {
+        key = {
+            hdr.ethernet.srcAddr : exact;
+            hdr.ethernet.dstAddr : exact;
+        }
+        actions = {
+            update_link_status;
+            reset_link_status;
+            no_op;
+        }
+        size = 1024;
+        default_action = no_op();
     }
 
     apply {
@@ -60,6 +82,7 @@ control MyIngress(inout headers hdr,
                 meta.flow_id.dstPort = hdr.udp.dstPort;
             }
             heavy_hitter_detection.apply();
+            link_monitor.apply();
         }
     }
 }

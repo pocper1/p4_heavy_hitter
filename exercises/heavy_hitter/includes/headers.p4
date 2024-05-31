@@ -53,6 +53,7 @@ struct flow_id_t {
 struct metadata {
     flow_id_t flow_id;
     bit<32> flow_count;
+    bit<32> link_status;
 }
 
 struct headers {
