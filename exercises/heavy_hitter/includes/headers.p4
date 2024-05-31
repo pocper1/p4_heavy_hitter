@@ -42,18 +42,17 @@ header udp_t {
     bit<16> checksum;
 }
 
-struct metadata {
-    flow_id_t flow_id;
-    bit<32> flow_count;
-}
-
-
 struct flow_id_t {
     bit<32> srcAddr;
     bit<32> dstAddr;
     bit<16> srcPort;
     bit<16> dstPort;
     bit<8>  proto;
+}
+
+struct metadata {
+    flow_id_t flow_id;
+    bit<32> flow_count;
 }
 
 struct headers {
