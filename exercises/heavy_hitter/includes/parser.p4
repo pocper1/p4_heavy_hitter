@@ -24,7 +24,7 @@ parser MyParser(packet_in packet,
 
     state parse_probe {
         packet.extract(hdr.probe);
-        meta.parser_metadata.remaining = hdr.probe.hop_cnt + 1l
+        meta.parser_metadata.remaining = hdr.probe.hop_cnt + 1;
         transition select(hdr.probe.hop_cnt) {
             0: parse_probe_fwd;
             default: parse_probe_data;
