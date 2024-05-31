@@ -67,8 +67,9 @@ struct parser_metadata_t {
 
 struct metadata {
     bit<8> egress_spec;
-    
-    //for heavy hitter
+    parser_metadata_t parser_metadata;
+
+    // For heavy hitter
     bit<32> flow_id_srcAddr;
     bit<32> flow_id_dstAddr;
     bit<16> flow_id_srcPort;
