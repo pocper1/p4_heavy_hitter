@@ -73,7 +73,7 @@ control MyIngress(inout headers hdr,
             NoAction;
         }
         size = 1024;
-        default_action = NoAction(); 
+        default_action = NoAction; 
     }
 
     apply {
@@ -121,7 +121,7 @@ control MyEgress(inout headers hdr,
             set_swid;
             NoAction;
         }
-        default_action = NoAction();
+        default_action = NoAction;
     }
 
     apply { 
