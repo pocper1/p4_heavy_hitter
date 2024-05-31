@@ -4,7 +4,7 @@ typedef bit<32> ip4Addr_t;
 header ethernet_t {
     bit<48> dstAddr;
     bit<48> srcAddr;
-    bit<16>   etherType;
+    bit<16> etherType;
 }
 
 header ipv4_t {
@@ -57,6 +57,8 @@ struct flow_id_t {
 }
 
 struct headers {
-    ethernet_t              ethernet;
-    ipv4_t                  ipv4;
+    ethernet_t  ethernet;
+    ipv4_t      ipv4;
+    tcp_t       tcp;
+    udp_t       udp;  
 }
