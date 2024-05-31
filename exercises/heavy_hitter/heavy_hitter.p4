@@ -108,6 +108,7 @@ control MyEgress(inout headers hdr,
                  inout standard_metadata_t standard_metadata) {
     // count the number of bytes seen since the last probe
     register<bit<32>>(MAX_PORTS) byte_cnt_reg;
+
     //remember the time of the last probe
     register<time_t>(MAX_PORTS) last_time_reg;
 
@@ -130,7 +131,8 @@ control MyEgress(inout headers hdr,
         time_t cur_time = standard_metadata.egress_global_timestamp;
         
         // increment byte cnt for the packet's port
-        byte_cnt_reg.read(byte_cnt, (bit<32>)standard_metadata.egress_port, new_byte_cnt);
+        byte_cnt_reg.read(byte_cnt, (bit<32>)standard_metadata.egress_port);
+        byte_cnt = byte_cnt + standard_metadata.packet_length;
 
         // reset the byte count when a probe packet passes through
         new_byte_cnt = (hdr.probe.isValid()) ? 0 : byte_cnt;
