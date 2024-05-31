@@ -36,7 +36,7 @@ control MyIngress(inout headers hdr,
     action count_flow() {
         meta.flow_count = meta.flow_count + 1;
         if (meta.flow_count > THRESHOLD) {
-            mark_to_drop(standard_metadata);
+            drop();
         }
     }
 
