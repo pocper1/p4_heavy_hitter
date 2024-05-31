@@ -1,52 +1,12 @@
-/* -*- P4_16 -*- */
 #include <core.p4>
 #include <v1model.p4>
+#include <includes/headers.p4>
+#include <includes/parser.p4>
 
-/*************************************************************************
-*********************** H E A D E R S  ***********************************
-*************************************************************************/
+const bit<16> TYPE_IPV4 = 0x800;
+const bit<16> TYPE_SRCROUTING = 0x1234;
 
-typedef bit<9>  egressSpec_t;
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
-
-
-header ethernet_t {
-    macAddr_t dstAddr;
-    macAddr_t srcAddr;
-    bit<16>   etherType;
-}
-
-
-struct metadata {
-    /* empty */
-}
-
-struct headers {
-    ethernet_t   ethernet;
-}
-
-/*************************************************************************
-*********************** P A R S E R  ***********************************
-*************************************************************************/
-
-parser MyParser(packet_in packet,
-                out headers hdr,
-                inout metadata meta,
-                inout standard_metadata_t standard_metadata) {
-
-    state start {
-        transition parse_ethernet;
-    }
-
-    state parse_ethernet {
-        packet.extract(hdr.ethernet);
-        transition select(hdr.ethernet.etherType) {
-            default : accept;
-        }
-    }
-}
-
+const bit<32> THRESHOLD = 1000;
 
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
@@ -65,33 +25,44 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
+    action count_packets() {
+        heavy_hitter_counter.count(meta.pkt_id);
+        if(heavy_hitter_counter.read(meta.pkt_id) > THRESHOLD) {
+            mark_as_heavy_hitter();
+            report_heavy_hitter();
+        }
+    }
+
+    action mark_as_heavy_hitter() {
+        hdr.ipv4.diffserv = 0x2E;
+    }
+
+    action report_heavy_hitter() {
+        generate_digest(digest_id, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr});
+    }
+
+    table detect_heavy_hitter {
+        actions = {
+            count_packets;
+            NoAction;
+        }
+
+        key = {
+            hdr.ipv4.srcAddr: lpm;
+            hdr.ipv4.dstAddr: lpm;
+        }
+
+        size = 4096;
+        default_action = NoAction();
+    }
     action drop() {
         mark_to_drop(standard_metadata);
     }
 
-    // TODO: define `multicast` action to multicast packets to group 1
-    // Hint: Check v1model for multicast group
-
-    action mac_forward(egressSpec_t port) {
-        standard_metadata.egress_spec = port;
-    }
-
-    table mac_lookup {
-        key = {
-            hdr.ethernet.dstAddr : exact;
-        }
-        actions = {
-            // TODO: add `multicast` action to the list of available actions
-            mac_forward;
-            drop;
-        }
-        size = 1024;
-        // TODO : replace default drop action by multicast
-        default_action = drop;
-    }
     apply {
-        if (hdr.ethernet.isValid())
-            mac_lookup.apply();
+        if(hdr.ipv4.isValid()) {
+            detect_heavy_hitter.apply();
+        }
     }
 }
 
@@ -102,16 +73,7 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-
-    action drop() {
-        mark_to_drop(standard_metadata);
-    }
-
-    apply {
-        // Prune multicast packet to ingress port to preventing loop
-        if (standard_metadata.egress_port == standard_metadata.ingress_port)
-            drop();
-    }
+    apply {  }
 }
 
 /*************************************************************************
@@ -119,11 +81,8 @@ control MyEgress(inout headers hdr,
 *************************************************************************/
 
 control MyComputeChecksum(inout headers hdr, inout metadata meta) {
-     apply {
-
-    }
+    apply {  }
 }
-
 
 /*************************************************************************
 ***********************  D E P A R S E R  *******************************
@@ -132,6 +91,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
+        packet.emit(hdr.ipv4);
     }
 }
 

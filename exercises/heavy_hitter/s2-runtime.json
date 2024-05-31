@@ -1,6 +1,13 @@
 {
   "target": "bmv2",
-  "p4info": "build/source_routing.p4.p4info.txt",
-  "bmv2_json": "build/source_routing.json",
-  "table_entries": [ ]
+  "p4info": "build/heavy_hitter.p4.p4info.txt",
+  "bmv2_json": "build/heavy_hitter.json",
+  "table_entries": [
+    {
+      "table": "MyIngress.detect_heavy_hitter",
+      "default_action": true,
+      "action_name": "NoAction",
+      "action_params": {}
+    } 
+  ]
 }
