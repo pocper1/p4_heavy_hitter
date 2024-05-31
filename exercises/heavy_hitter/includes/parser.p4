@@ -43,7 +43,7 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.probe_fwd.next);
         meta.parser_metadata.remaining = meta.parser_metadata.remaining - 1;
         meta.egress_spec = hdr.probe_fwd.last.egress_spec;
-        transition select(meta.parser_meta.remaining) {
+        transition select(meta.parser_metadata.remaining) {
             0: accept;
             default: parse_probe_fwd;
         }
