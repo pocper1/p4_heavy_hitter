@@ -1,7 +1,7 @@
 #include <core.p4>
 #include <v1model.p4>
-#include <includes/headers.p4>
-#include <includes/parser.p4>
+#include "includes/headers.p4"
+#include "includes/parser.p4"
 
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<16> TYPE_SRCROUTING = 0x1234;
