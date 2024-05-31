@@ -25,43 +25,41 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    action count_packets() {
-        heavy_hitter_counter.count(meta.pkt_id);
-        if(heavy_hitter_counter.read(meta.pkt_id) > THRESHOLD) {
-            mark_as_heavy_hitter();
-            report_heavy_hitter();
+    action no_op() {}
+
+    action count_flow() {
+        modify_field(meta.flow_count, meta.flow_count + 1);
+        if (meta.flow_count > THRESHOLD) {
+            mark_to_drop();
         }
     }
 
-    action mark_as_heavy_hitter() {
-        hdr.ipv4.diffserv = 0x2E;
-    }
-
-    action report_heavy_hitter() {
-        generate_digest(digest_id, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr});
-    }
-
-    table detect_heavy_hitter {
-        actions = {
-            count_packets;
-            NoAction;
-        }
-
+    table heavy_hitter_detection {
         key = {
-            hdr.ipv4.srcAddr: lpm;
-            hdr.ipv4.dstAddr: lpm;
+            meta.flow_id : exact;
         }
-
-        size = 4096;
-        default_action = NoAction();
-    }
-    action drop() {
-        mark_to_drop(standard_metadata);
+        actions = {
+            count_flow;
+            no_op;
+        }
+        size = 1024;
+        default_action = no_op(); 
     }
 
     apply {
-        if(hdr.ipv4.isValid()) {
-            detect_heavy_hitter.apply();
+        if (hdr.ipv4.isValid()) {
+            meta.flow_id.srcAddr = hdr.ipv4.srcAddr;
+            meta.flow_id.dstAddr = hdr.ipv4.dstAddr;
+            meta.flow_id.proto = hdr.ipv4.protocol;
+
+            if (hdr.tcp.isValid()) {
+                meta.flow_id.srcPort = hdr.tcp.srcPort;
+                meta.flow_id.dstPort = hdr.tcp.dstPort;
+            } else if (hdr.udp.isValid()) {
+                meta.flow_id.srcPort = hdr.udp.srcPort;
+                meta.flow_id.dstPort = hdr.udp.dstPort;
+            }
+            heavy_hitter_detection.apply();
         }
     }
 }
@@ -92,6 +90,11 @@ control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
+        if (hdr.tcp.isValid()) {
+            packet.emit(hdr.tcp);
+        } else if (hdr.udp.isValid()) {
+            packet.emit(hdr.udp);
+        }
     }
 }
 
@@ -101,9 +104,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
 
 V1Switch(
 MyParser(),
-MyVerifyChecksum(),
 MyIngress(),
 MyEgress(),
-MyComputeChecksum(),
 MyDeparser()
 ) main;
