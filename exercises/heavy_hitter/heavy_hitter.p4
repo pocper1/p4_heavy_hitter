@@ -33,6 +33,20 @@ control MyIngress(inout headers hdr,
         standard_metadata.egress_spec = 0;
     }
 
+    action count_flow() {
+        meta.flow_count = meta.flow_count + 1;
+        if (meta.flow_count > THRESHOLD) {
+            mark_to_drop();
+        }
+    }
+
+    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
+        standard_metadata.egress_spec = port;
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+
     table ipv4_lpm {
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -44,13 +58,6 @@ control MyIngress(inout headers hdr,
         }
         size = 1024;
         default_action = drop();
-    }
-
-    action count_flow() {
-        meta.flow_count = meta.flow_count + 1;
-        if (meta.flow_count > THRESHOLD) {
-            mark_to_drop();
-        }
     }
 
     table heavy_hitter_detection {
