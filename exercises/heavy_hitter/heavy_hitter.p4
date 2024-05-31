@@ -1,21 +1,10 @@
 #include <core.p4>
 #include <v1model.p4>
+
 #include "includes/headers.p4"
 #include "includes/parser.p4"
 
-const bit<16> TYPE_IPV4 = 0x800;
-const bit<16> TYPE_SRCROUTING = 0x1234;
-
 const bit<32> THRESHOLD = 1000;
-
-/*************************************************************************
-************   C H E C K S U M    V E R I F I C A T I O N   *************
-*************************************************************************/
-
-control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
-    apply {  }
-}
-
 
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -98,14 +87,6 @@ control MyEgress(inout headers hdr,
 }
 
 /*************************************************************************
-*************   C H E C K S U M    C O M P U T A T I O N   **************
-*************************************************************************/
-
-control MyComputeChecksum(inout headers hdr, inout metadata meta) {
-    apply {  }
-}
-
-/*************************************************************************
 ***********************  D E P A R S E R  *******************************
 *************************************************************************/
 
@@ -125,9 +106,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
 ***********************  S W I T C H  *******************************
 *************************************************************************/
 
-V1Switch(
-MyParser(),
-MyIngress(),
-MyEgress(),
-MyDeparser()
-) main;
+V1Switch(MyParser(),
+         MyIngress(),
+         MyEgress(),
+         MyDeparser()) main;
