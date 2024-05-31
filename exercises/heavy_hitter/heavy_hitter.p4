@@ -30,14 +30,7 @@ control MyIngress(inout headers hdr,
     action no_op() {}
 
     action drop() {
-        standard_metadata.egress_spec = 0;
-    }
-
-    action count_flow() {
-        meta.flow_count = meta.flow_count + 1;
-        if (meta.flow_count > THRESHOLD) {
-            drop();
-        }
+        mark_to_drop(standard_metadata);
     }
 
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
@@ -58,6 +51,14 @@ control MyIngress(inout headers hdr,
         }
         size = 1024;
         default_action = drop();
+    }
+
+    // heavy hitter 
+    action count_flow() {
+        meta.flow_count = meta.flow_count + 1;
+        if (meta.flow_count > THRESHOLD) {
+            drop();
+        }
     }
 
     table heavy_hitter_detection {
@@ -82,18 +83,11 @@ control MyIngress(inout headers hdr,
             meta.flow_id_dstAddr = hdr.ipv4.dstAddr;
             meta.flow_id_proto = hdr.ipv4.protocol;
 
-            if (hdr.tcp.isValid()) {
-                meta.flow_id_srcPort = hdr.tcp.srcPort;
-                meta.flow_id_dstPort = hdr.tcp.dstPort;
-            } else if (hdr.udp.isValid()) {
-                meta.flow_id_srcPort = hdr.udp.srcPort;
-                meta.flow_id_dstPort = hdr.udp.dstPort;
-            }
             heavy_hitter_detection.apply();
             ipv4_lpm.apply();
         } 
         else if(hdr.probe.isValid()) {
-            standard_metadata.egress_spec = (bit<9>) meta.egress_spec;
+            standard_metadata.egress_spec = (bit<9>)meta.egress_spec;
             hdr.probe.hop_cnt = hdr.probe.hop_cnt + 1;
         }
     }
@@ -172,8 +166,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
     apply {
         update_checksum(
             hdr.ipv4.isValid(),
-            {
-                hdr.ipv4.version,
+            {   hdr.ipv4.version,
                 hdr.ipv4.ihl,
                 hdr.ipv4.diffserv,
                 hdr.ipv4.totalLen,
@@ -183,8 +176,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
                 hdr.ipv4.ttl,
                 hdr.ipv4.protocol,
                 hdr.ipv4.srcAddr,
-                hdr.ipv4.dstAddr
-            },
+                hdr.ipv4.dstAddr    },
             hdr.ipv4.hdrChecksum,
             HashAlgorithm.csum16
         );
