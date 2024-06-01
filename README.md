@@ -35,7 +35,8 @@
 3. 進到資料夾，並且安裝 `cd p4-utils & sudo ./install.sh`
 4. 輸入 `sudo p4run` 確認安裝
 
-## heavy hitter
+## heavy hitter detector
+> 可作為 DoS 攻擊的防禦機制
 ### 核心邏輯
 程式的核心邏輯是使用布隆過濾器來追蹤並計數網路流量，特別是檢測和更新重流量（heavy hitter）的計數。以下是這段程式的核心邏輯分解：
 
@@ -90,8 +91,9 @@ action update_bloom_filter() {
     
 
 ## 參考資料
-1. 參考：[論文](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8967165)
+1. 論文參考：[heavy hitter paper](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8967165)
 2. github: [p4 tuturial](https://github.com/p4lang/tutorials/tree/master)
 3. github: [p4 learning](https://github.com/nsg-ethz/p4-learning)
 4. github: [p4-guide](https://github.com/jafingerhut/p4-guide/blob/master/bin/README-install-troubleshooting.md)
 5. github: [p4-utils](https://github.com/nsg-ethz/p4-utils)
+6. 網路資源：[hackmd](https://hackmd.io/@KimLin/rJSWM9y6h)
