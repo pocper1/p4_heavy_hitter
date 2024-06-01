@@ -1,7 +1,7 @@
 # P4 Heavy hitter
 ## 架構圖
 ### 網路拓墣
-[structure](images/structure.png)
+![structure](images/structure.png)
 
 ### 布隆過濾器(bloom Filter)
 布隆過濾器（Bloom Filter）是一種空間效率很高的概率型資料結構，用來檢查一個元素是否在一個集合中。其主要用途包括：
