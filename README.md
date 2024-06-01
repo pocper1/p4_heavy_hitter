@@ -1,172 +1,97 @@
-# P4 Tutorial
+# P4 Heavy hitter
+## 架構圖
+### 網路拓墣
+[structure](images/structure.png)
 
-* [Introduction](#introduction)
-* [Presentation](#presentation)
-* [P4 Documentation](#p4-documentation)
-* [Obtaining required software](#obtaining-required-software)
-     * [To build the virtual machine](#to-build-the-virtual-machine)
-     * [Accessing the VM](#accessing-the-vm)
-     * [To install P4 development tools on an existing system](#to-install-p4-development-tools-on-an-existing-system)
-* [How to Contribute](#how-to-contribute)
-* [Older tutorials](#older-tutorials)
+### 布隆過濾器(bloom Filter)
+布隆過濾器（Bloom Filter）是一種空間效率很高的概率型資料結構，用來檢查一個元素是否在一個集合中。其主要用途包括：
 
-If you are reading this while not attending a live P4 tutorial class,
-see [below](#older-tutorials) for links to information about recently
-given live classes.
+1.	快速查詢：
+    - 布隆過濾器可以用來快速判斷一個元素是否屬於某個集合。它的查詢速度很快，且所需的空間很少。
+    - 如果布隆過濾器判定一個元素不在集合中，那麼這個判定是確定的。如果判定一個元素在集合中，則有一定的概率是錯誤的（即假陽性）。
+2.	去重檢查：
+    - 在需要快速檢查是否有重複數據的應用中，如網頁爬蟲檢查URL是否已經被訪問過，布隆過濾器能夠高效地進行判斷。
+3.	分佈式系統中的元素存在性檢查：
+    - 在大型分佈式系統中，布隆過濾器用來檢查某個元素是否存在於某一節點上，從而避免不必要的網路傳輸和資源消耗。
+4.	數據庫查詢加速：
+    - 在數據庫系統中，布隆過濾器可以用來快速判斷數據是否存在於磁碟或記憶體中，從而加速查詢過程。
+5. 在 heavy hitter 檢測中的應用：
+    - 在重流量檢測中，布隆過濾器可以用來高效地記錄和更新流量計數，幫助識別頻繁出現的流量。
+    - 通過多個哈希函數計算出來的多個位置來記錄和更新流量計數，從而在保持空間效率的同時，實現對重流量的精確追蹤。
 
+布隆過濾器的特點是能夠以很小的空間代價來實現快速的元素存在性檢查，這使得它在需要高效查詢和空間優化的應用中非常實用。
 
-## Introduction
+## 執行步驟
 
-Welcome to the P4 Tutorial! We've prepared a set of exercises to help
-you get started with P4 programming, organized into several modules:
+### 虛擬環境安裝
+1. 先去 github [p4-guide](https://github.com/jafingerhut/p4-guide/blob/master/bin/README-install-troubleshooting.md) 下載 release VM Image link
+2. 將 VM image 以 Virtual box 的方式打開
+3. 登入時，選 account: `p4`，輸入 password: `p4`
+4. 就可以進到桌面了
 
-1. Introduction and Language Basics
-   - [Basic Forwarding](./exercises/basic)<br>
-     <small>In this exercise, you'll learn to implement basic IPv4 packet forwarding using P4. By extending the provided `basic.p4` skeleton, you'll develop logic for updating MAC addresses, decrementing TTL values, and forwarding packets based on predefined rules. Through practical implementation and testing on a fat-tree topology in Mininet, you'll gain insights into designing and deploying data plane logic for network switches.</small>
-   
-   - [Basic Tunneling](./exercises/basic_tunnel)<br>
-     <small>In this exercise, you enhance an IP router implemented in P4 by adding basic tunneling support, enabling encapsulation of IP packets for customized forwarding. By introducing a new tunnel header type, you modify the switch code to handle encapsulated packets and define forwarding rules based on destination IDs. Through static control plane entries, the switch routes encapsulated packets, showcasing P4's versatility in customizing packet processing and network functionality.</small>
+### 安裝 p4-utils
+1. 使用 terminal
+2. 下載 p4-utils，`git clone https://github.com/nsg-ethz/p4-utils.git`
+3. 進到資料夾，並且安裝 `cd p4-utils & sudo ./install.sh`
+4. 輸入 `sudo p4run` 確認安裝
 
-2. P4Runtime and the Control Plane
-   - [P4Runtime](./exercises/p4runtime)<br>
-     <small>This exercise involves implementing a control plane using P4Runtime to send flow entries to switches for tunneling traffic between hosts. Students modify the provided P4 program and controller script to establish connections, push P4 programs, install tunnel ingress rules, and read tunnel counters, enhancing their understanding of P4Runtime and network forwarding logic.</small>
+## heavy hitter
+### 核心邏輯
+程式的核心邏輯是使用布隆過濾器來追蹤並計數網路流量，特別是檢測和更新重流量（heavy hitter）的計數。以下是這段程式的核心邏輯分解：
 
-3. Monitoring and Debugging
-   - [Explicit Congestion Notification](./exercises/ecn)<br>
-     <small>In this tutorial, you'll enhance a basic L3 forwarding P4 program with Explicit Congestion Notification (ECN) support, enabling end-to-end notification of network congestion without packet drops. By modifying the `ecn.p4` file, you'll implement ECN logic such as updating the ECN flag based on queue length thresholds and configuring static rules for proper ECN handling, followed by testing the solution in Mininet to verify packet forwarding and ECN flag manipulation.</small>
+1.	哈希計算：
+   - 程式首先使用兩種不同的哈希算法（CRC16 和 CRC32）來計算封包的哈希值，這些哈希值是根據封包的五元組（源IP地址、目的IP地址、源端口、目的端口和協議類型）計算得出的。
+   - 這些哈希值用來確定布隆過濾器中的位置。
+2.	讀取計數器：
+   - 根據計算出的哈希值，程式從布隆過濾器中讀取對應位置的計數器值。
+   - 這些計數器值表示目前記錄到的流量數。
+3.	更新計數器：
+   - 程式將讀取到的計數器值加1，表示記錄到新的封包流量。
+4.	寫入更新後的計數器值：
+   - 將更新後的計數器值寫回布隆過濾器中的相應位置，從而更新流量記錄。
 
-   - [Multi-Hop Route Inspection](./exercises/mri)<br>
-     <small>This tutorial aims to augment basic L3 forwarding with a simplified version of In-Band Network Telemetry (INT) called Multi-Hop Route Inspection (MRI). It guides users through extending a skeleton P4 program, `mri.p4`, to append an ID and queue length to the header stack of every packet, enabling tracking of the packet's path and queue lengths.</small>
+```p4!=
+action update_bloom_filter() {
+    // 計算寄存器位置
+    hash(meta.output_hash_one, HashAlgorithm.crc16, (bit<16>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)BLOOM_FILTER_ENTRIES);
+    hash(meta.output_hash_two, HashAlgorithm.crc32, (bit<16>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)BLOOM_FILTER_ENTRIES);
 
-4. Advanced Behavior
-   - [Source Routing](./exercises/source_routing)<br>
-     <small>This exercise aims to implement source routing, where the source host specifies the route for each packet through a stack of output ports. After configuring the P4 program, `source_routing.p4`, packets should be routed according to the specified port numbers in the stack, enabling end-to-end delivery based on the predetermined path.</small>
+    // 讀取計數器
+    bloom_filter.read(meta.counter_one, meta.output_hash_one);
+    bloom_filter.read(meta.counter_two, meta.output_hash_two);
 
-   - [Calculator](./exercises/calc)<br>
-     <small>This tutorial guides you through implementing a basic calculator using a custom protocol header in P4. The P4 program, `calc.p4`, parses incoming calculator packets, performs the specified operation on the operands, and returns the result to the sender, enabling basic arithmetic calculations in a network switch.</small>
+    // 更新計數器
+    meta.counter_one = meta.counter_one + 1;
+    meta.counter_two = meta.counter_two + 1;
 
-   - [Load Balancing](./exercises/load_balance)<br>
-     <small>This exercise guides you in implementing load balancing using Equal-Cost Multipath Forwarding in a P4 program named `load_balance.p4`. It utilizes a hash function to distribute packets between two destination hosts based on a 5-tuple hash, enabling efficient traffic distribution across the network.</small>
+    // 寫入更新後的計數器
+    bloom_filter.write(meta.output_hash_one, meta.counter_one);
+    bloom_filter.write(meta.output_hash_two, meta.counter_two);
+}
+```
+### 撰寫 heavy hitter
+1. 參考：[github p4-learning](https://github.com/nsg-ethz/p4-learning.git) 資訊，來寫 heavy hitter
+2. 這邊的閾值設定為 1000，因此當封包超過 1000時就會被 block 掉
 
-   - [Quality of Service](./exercises/qos)<br>
-     <small>This tutorial focuses on implementing Quality of Service (QoS) using Differentiated Services (Diffserv) in a P4 program named `qos.p4`. It extends basic L3 forwarding to classify and manage network traffic, providing QoS on modern IP networks by setting DiffServ flags based on traffic classes and priority.</small>
-
-   - [Multicasting](./exercises/multicast)<br> 
-     <small>This exercise involves writing a P4 program to enable a network switch to multicast packets to multiple output ports based on the destination MAC address. It requires the implementation of logic to handle multicast packets, including defining actions for packet forwarding and configuring the control plane to manage packet processing rules. Through practical implementation and testing in a Mininet environment, participants learn to enhance network traffic management and efficiency through multicast communication.</small>
-
-5. Stateful Packet Processing
-   - [Firewall](./exercises/firewall)<br>
-     <small>This exercise focuses on implementing a basic stateful firewall using a P4 program named `firewall.p4`. The firewall is designed to allow communication between internal and external hosts based on predefined rules, utilizing a bloom filter for stateful packet inspection and filtering.</small>
-
-   - [Link Monitoring](./exercises/link_monitor)<br>
-     <small>This exercise focuses on implementing link monitoring within a network using P4 programming. By extending the basic IPv4 forwarding exercise, the program enables the measurement of link utilization by processing source-routed probe packets. Through the manipulation of probe packet headers and the maintenance of register arrays, the solution facilitates accurate monitoring of link utilization, which can be invaluable for network management and optimization.</small>
-
-## Presentation
-
-The slides are available [online](https://bit.ly/p4d2-2018-spring) and
-in the [P4_tutorial.pdf](./P4_tutorial.pdf) in the tutorial directory.
-
-A P4 Cheat Sheet is also available [online](https://drive.google.com/file/d/1Z8woKyElFAOP6bMd8tRa_Q4SA1cd_Uva/view?usp=sharing)
-which contains various examples that you can refer to.
-
-## P4 Documentation
-
-The documentation for P4_16 and P4Runtime is available [here](https://p4.org/specs/)
-
-All excercises in this repository use the v1model architecture, the documentation for which is available at:
-1. The BMv2 Simple Switch target document accessible [here](https://github.com/p4lang/behavioral-model/blob/master/docs/simple_switch.md) talks mainly about the v1model architecture.
-2. The include file `v1model.p4` has extensive comments and can be accessed [here](https://github.com/p4lang/p4c/blob/master/p4include/v1model.p4).
-
-## Obtaining required software
-
-If you are starting this tutorial at one of the proctored tutorial events,
-then we've already provided you with a virtual machine that has all of
-the required software installed. Ask an instructor for a USB stick with
-the VM image.
-
-Otherwise, to complete the [exercises](https://github.com/p4lang/tutorials/tree/master/exercises), you will need to either build a
-virtual machine or install several dependencies.
-
-### To build the virtual machine
-
-#### Requirements
-
-- [Vagrant](https://vagrantup.com)
-- [VirtualBox](https://virtualbox.org)
-- At least 12 GB of free disk space, otherwise the installation can fail in unpredictable ways.
-
-#### Installation Steps
-
-1. Install Vagrant and VirtualBox on your system.
-2. Clone the repository
-   
-   ```
-   git clone https://github.com/p4lang/tutorials.git
-   ```
-3. Navigate to the cloned directory :
-   
-   ```
-   cd vm-ubuntu-20.04
-   ```
-4. Start the virtual machine using Vagrant:
-   ```
-   vagrant up
-   ```
-   *Note* : The time for this step depends on your computer and Internet speed. On a 2015 MacBook Pro with a 50 Mbps download speed, it took approximately 20 minutes. Ensure a stable Internet connection throughout the process.
-
-### Accessing the VM
+### 編譯 p4 檔案
+1. 在 heavy_hitter 資料夾底下，輸入 `sudo p4run`
+2. 就可以看到 mininet 畫面
+3. 輸入 `xterm h1 h2` 會產生對應 h1, h2 的終端機
+4. h2(接收端): 在 h2 terminal 輸入，`sudo python3 receive.py`
+5. h1(發送端): 在 h1 terminal 輸入，`sudo python3 send.py 10.0.2.2 1001`
 
 
-- There are two user accounts:
-  - Username: vagrant | Password: vagrant (This is the default account)
-  - Username: p4 | Password: p4 (Usage of this account is expected)
+## 執行結果
+- 啟動 mininet
+  ![mininet](images/mininet.png)
+- heavy hitter success
+  可以看到 sender 發送 1001 個封包，但是在 receiver 只收到 1000 個封包就不再接收了
+  ![alt text](images/done.png)
+    
 
-*Note*: Before running the `vagrant up` command, make sure you have enabled virtualization in your environment; otherwise you may get a "VT-x is disabled in the BIOS for both all CPU modes" error. Check [this](https://stackoverflow.com/questions/33304393/vt-x-is-disabled-in-the-bios-for-both-all-cpu-modes-verr-vmx-msr-all-vmx-disabl) for enabling it in virtualbox and/or BIOS for different system configurations.
-
-You will need the script to execute to completion before you can see the `p4` login on your virtual machine's GUI. In some cases, the `vagrant up` command brings up only the default `vagrant` login with the password `vagrant`. Dependencies may or may not have been installed for you to proceed with running P4 programs. Please refer the [existing issues](https://github.com/p4lang/tutorials/issues) to help fix your problem or create a new one if your specific problem isn't addressed there.
-
-
-### To install P4 development tools on an existing system
-
-There are instructions and scripts in another Github repository that can, starting from a freshly installed Ubuntu 20.04 or 22.04 Linux system with enough RAM and free disk space, install all of the necessary P4 development tools to run the exercises in this repository.  You can find those instructions and scripts [here](https://github.com/jafingerhut/p4-guide/blob/master/bin/README-install-troubleshooting.md) (note that you must clone a copy of that entire repository in order for its install scripts to work).
-
-# How to Contribute
-
-We value and welcome new contributions. To get started, kindly look at our [Contribution Guidelines](CONTRIBUTING.md).
-
-# Older tutorials
-
-Multiple live tutorial classes have been given using the example code
-in this repository for hands-on exercises.  For example, there is one
-each April or May at the P4 workshop at Stanford University in
-California, and there have been several at networking conferences such
-as ACM SIGCOMM.
-
-Please [create an issue](https://github.com/p4lang/tutorials/issues)
-for this tutorials repository if you know a public link for classroom
-video recordings and/or pre-built VM images that currently do not have
-such a link.
-
-
-## ACM SIGCOMM August 2019 Tutorial on Programming the Network Data Plane
-
-You can find more information about the ACM SIGCOMM August 2019 Tutorial on Programming the Network Data Plane [here](https://p4.org/events/2019-08-23-p4-tutorial/)
-
-The page linked above has a link to download a pre-built VM image used
-for this class, as well as instructions to build one yourself from a
-particular branch of this repository.
-
-
-## P4 Developer Day, April 2019
-
-You can find more information about the P4 Developer Day held in April 2019 [here](https://p4.org/events/2019-04-30-p4-developer-day/)
-
-Both a beginner and advanced class were taught at this event.  The
-page linked above contains instructions to download and install a
-pre-built Linux VM that was used during the classes.
-
-
-## P4 Developer Day, November 2017
-
-This [link](https://www.youtube.com/watch?v=3DJeqS_dl_o&list=PLf7HGRMAlJBzGC58GcYpimyIs7D0nuSoo) plays the first welcome video of a 
-series of 6 videos of tutorials given at this event.
+## 參考資料
+1. 參考：[論文](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8967165)
+2. github: [p4 tuturial](https://github.com/p4lang/tutorials/tree/master)
+3. github: [p4 learning](https://github.com/nsg-ethz/p4-learning)
+4. github: [p4-guide](https://github.com/jafingerhut/p4-guide/blob/master/bin/README-install-troubleshooting.md)
+5. github: [p4-utils](https://github.com/nsg-ethz/p4-utils)
